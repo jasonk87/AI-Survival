@@ -1,0 +1,5 @@
+{
+  "name": "Robot Sandbox AI",
+  "description": "A simulation where AI-powered robots collaborate to achieve goals in a dynamic sandbox environment. Users can set a goal, and the robots will communicate and interact with their surroundings to accomplish it.",
+  "requestFramePermissions": []
+}
