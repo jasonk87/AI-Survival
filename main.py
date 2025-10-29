@@ -62,6 +62,7 @@ class ActionType(str, Enum):
     IDLE = 'IDLE'
     DROP = 'DROP'
     EAT = 'EAT'
+    REMEMBER = 'REMEMBER'
 
 class Robot(BaseItem):
     type: ItemType = ItemType.ROBOT
@@ -72,6 +73,7 @@ class Robot(BaseItem):
     status: RobotStatus = RobotStatus()
     is_inactive: bool = False
     current_action: Optional[ActionType] = None
+    memory: RobotMemory = RobotMemory()
 
 class EnvironmentItem(BaseItem):
     pass
@@ -87,11 +89,16 @@ class RobotActionPayload(BaseModel):
     message: Optional[str] = None
     target_id: Optional[str] = None
     target_position: Optional[Position] = None
+    memory_name: Optional[str] = None
+    memory_position: Optional[Position] = None
 
 class RobotAction(BaseModel):
     action: ActionType
     payload: RobotActionPayload
     thought: Optional[str] = None
+
+class RobotMemory(BaseModel):
+    known_locations: dict[str, Position] = {}
 
 class LogEntry(BaseModel):
     id: int
@@ -328,6 +335,16 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
     elif action.action == ActionType.IDLE:
         add_log(robot.name, robot.color, 'Is resting.', 'ACTION')
 
+    elif action.action == ActionType.REMEMBER:
+        name = action.payload.memory_name
+        pos = action.payload.memory_position
+        if name and pos:
+            robot_in_state.memory.known_locations[name] = pos
+            memory_file = f"{robot.id}_memory.json"
+            with open(memory_file, 'w') as f:
+                json.dump(robot_in_state.memory.dict(), f, indent=2)
+            add_log(robot.name, robot.color, f"Remembered location '{name}' at ({pos.x}, {pos.y}).", 'ACTION')
+
     else:
         add_log(robot.name, robot.color, f"Attempted an unknown action: {action.action}", 'SYSTEM')
 
@@ -466,7 +483,14 @@ def render_grid(environment: EnvironmentState, world_state: WorldState):
         print(f"Robot {i+1} ({robot.name}): Inv: {robot.inventory or 'Empty'} | Nrg: {robot.status.energy:.0f} | Hgr: {robot.status.hunger:.0f}")
 
 async def get_robot_next_action(robot: Robot, environment: EnvironmentState, world: WorldState, logs: List[LogEntry], host: str) -> Optional[RobotAction]:
+    memory_file = f"{robot.id}_memory.json"
+    if os.path.exists(memory_file):
+        with open(memory_file, 'r') as f:
+            robot.memory = RobotMemory(**json.load(f))
+
     other_robots = [r for r in environment.robots if r.id != robot.id]
+
+    known_locations_str = "\n".join([f"- {name}: ({pos.x}, {pos.y})" for name, pos in robot.memory.known_locations.items()])
 
     prompt = f"""
 World State: Day {world.day}, Time: {world.time_of_day}, Weather: {world.weather}, Temperature: {world.temperature}°
@@ -481,6 +505,9 @@ Your current status:
 - Energy: {round(robot.status.energy)}/100
 - Hunger: {round(robot.status.hunger)}/100
 {"- YOU ARE INACTIVE. You can only perform IDLE action to recover." if robot.is_inactive else ""}
+
+Your Memory (Known Locations):
+{known_locations_str or "No known locations."}
 
 Current Environment State:
 Items:
