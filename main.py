@@ -2,9 +2,20 @@ import ollama
 import json
 import asyncio
 import argparse
+import os
+import time
+import logging
 from pydantic import BaseModel
 from typing import List, Optional, Literal
 from enum import Enum
+import heapq
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    filename='simulation.log',
+    filemode='w'
+)
 
 class Position(BaseModel):
     x: int
@@ -109,13 +120,11 @@ IMPASSABLE_ITEM_TYPES = [
 logs: List[LogEntry] = []
 log_id_counter = 0
 
-import heapq
-
 def add_log(robot_name: str, robot_color: str, message: str, type: Literal['ACTION', 'COMMUNICATION', 'GOAL', 'SYSTEM', 'STATUS']):
     global log_id_counter
     logs.append(LogEntry(id=log_id_counter, robot_name=robot_name, robot_color=robot_color, message=message, type=type))
     log_id_counter += 1
-    print(f"[{type}] {robot_name}: {message}")
+    logging.info(f"[{type}] {robot_name}: {message}")
 
 def find_path(start: Position, end: Position, env: EnvironmentState) -> Optional[List[Position]]:
     grid = [[0 for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
@@ -358,6 +367,34 @@ def simulation_tick(world_state: WorldState, environment: EnvironmentState) -> (
 
     return world_state, environment
 
+def render_grid(environment: EnvironmentState, world_state: WorldState):
+    os.system('cls' if os.name == 'nt' else 'clear')
+
+    grid = [['.' for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+
+    for item in environment.items:
+        char = '?'
+        if item.type == ItemType.TREE: char = 'T'
+        elif item.type == ItemType.ROCK: char = 'O'
+        elif item.type == ItemType.WATER_SOURCE: char = 'W'
+        elif item.type == ItemType.FIRE: char = 'F'
+        elif item.type == ItemType.AXE: char = 'a'
+        elif item.type == ItemType.WOOD: char = 'w'
+        grid[item.position.y][item.position.x] = char
+
+    for i, robot in enumerate(environment.robots):
+        grid[robot.position.y][robot.position.x] = f"{i+1}"
+
+    print("--- Robot Survival Simulation ---")
+    print(f"Day {world_state.day} | Time: {world_state.time_of_day} ({world_state.cycle_progress:.0f}%) | Temp: {world_state.temperature}°C | Weather: {world_state.weather}")
+    print("-" * (GRID_SIZE * 2 + 3))
+    for row in grid:
+        print(f"| {' '.join(row)} |")
+    print("-" * (GRID_SIZE * 2 + 3))
+
+    for i, robot in enumerate(environment.robots):
+        print(f"Robot {i+1} ({robot.name}): Inv: {robot.inventory or 'Empty'} | Nrg: {robot.status.energy:.0f} | Hgr: {robot.status.hunger:.0f}")
+
 async def get_robot_next_action(robot: Robot, environment: EnvironmentState, world: WorldState, logs: List[LogEntry], host: str) -> Optional[RobotAction]:
     other_robots = [r for r in environment.robots if r.id != robot.id]
 
@@ -405,7 +442,7 @@ Respond with a JSON object in the format: {{"thought": "...", "action": "...", "
         return RobotAction(**action_data)
 
     except Exception as e:
-        print(f"Error getting robot action from Ollama: {e}")
+        logging.error(f"Error getting robot action from Ollama: {e}")
         return None
 
 INITIAL_ENV_STATE = {
@@ -425,13 +462,14 @@ async def main(host: str):
     active_robot_index = 0
 
     while True:
+        render_grid(environment, world_state)
         environment = await run_simulation_turn(active_robot_index, environment, world_state, host)
         environment = handle_movement(environment)
         world_state, environment = simulation_tick(world_state, environment)
 
         active_robot_index = (active_robot_index + 1) % len(environment.robots)
 
-        await asyncio.sleep(1)
+        time.sleep(0.1)  # Control simulation speed
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
