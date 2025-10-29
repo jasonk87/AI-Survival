@@ -1,0 +1,11 @@
+{
+    "grid_size": 20,
+    "items": [
+        {"id": "tree-1", "type": "TREE", "position": {"x": 2, "y": 2}},
+        {"id": "rock-1", "type": "ROCK", "position": {"x": 5, "y": 5}},
+        {"id": "axe-1", "type": "AXE", "position": {"x": 1, "y": 1}}
+    ],
+    "robots": [
+        {"id": "robot-1", "type": "ROBOT", "name": "R1", "color": "blue", "position": {"x": 0, "y": 0}}
+    ]
+}

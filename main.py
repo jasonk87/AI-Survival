@@ -100,6 +100,11 @@ class RobotAction(BaseModel):
 class RobotMemory(BaseModel):
     known_locations: dict[str, Position] = {}
 
+class Scenario(BaseModel):
+    grid_size: int
+    items: List[EnvironmentItem]
+    robots: List[Robot]
+
 class LogEntry(BaseModel):
     id: int
     robot_name: str
@@ -542,19 +547,17 @@ Respond with a JSON object in the format: {{"thought": "...", "action": "...", "
         logging.error(f"Error getting robot action from Ollama: {e}")
         return None
 
-INITIAL_ENV_STATE = {
-    "items": [
-        {"id": "tree-1", "type": "TREE", "position": {"x": 2, "y": 2}},
-        {"id": "rock-1", "type": "ROCK", "position": {"x": 5, "y": 5}},
-        {"id": "axe-1", "type": "AXE", "position": {"x": 1, "y": 1}},
-    ],
-    "robots": [
-        {"id": "robot-1", "type": "ROBOT", "name": "R1", "color": "blue", "position": {"x": 0, "y": 0}},
-    ],
-}
-
 async def main(host: str):
-    environment = EnvironmentState(**INITIAL_ENV_STATE)
+    try:
+        with open(scenario_file, 'r') as f:
+            scenario_data = json.load(f)
+            scenario = Scenario(**scenario_data)
+            GRID_SIZE = scenario.grid_size
+            environment = EnvironmentState(items=scenario.items, robots=scenario.robots)
+    except (FileNotFoundError, json.JSONDecodeError, TypeError) as e:
+        logging.error(f"Error loading scenario file: {e}")
+        return
+
     world_state = WorldState()
     active_robot_index = 0
 
@@ -572,8 +575,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--host", default="192.168.86.250", help="Ollama host")
     parser.add_argument("--port", default="11434", help="Ollama port")
+    parser.add_argument("--scenario", default="scenario.json", help="Path to the scenario JSON file")
     args = parser.parse_args()
 
     ollama_host = f"http://{args.host}:{args.port}"
 
-    asyncio.run(main(host=ollama_host))
+    asyncio.run(main(host=ollama_host, scenario_file=args.scenario))
