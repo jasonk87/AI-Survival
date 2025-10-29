@@ -9,6 +9,8 @@ from pydantic import BaseModel
 from typing import List, Optional, Literal
 from enum import Enum
 import heapq
+import math
+import random
 
 logging.basicConfig(
     level=logging.INFO,
@@ -116,6 +118,8 @@ GRID_SIZE = 20
 IMPASSABLE_ITEM_TYPES = [
     ItemType.TREE, ItemType.ROCK, ItemType.WALL, ItemType.WATER_SOURCE
 ]
+
+DAY_CYCLE_MS = 60000  # 60 seconds for a full day/night cycle
 
 logs: List[LogEntry] = []
 log_id_counter = 0
@@ -353,17 +357,83 @@ def handle_movement(environment: EnvironmentState) -> EnvironmentState:
     return environment
 
 def simulation_tick(world_state: WorldState, environment: EnvironmentState) -> (WorldState, EnvironmentState):
-    # Simplified world state update
-    world_state.cycle_progress = (world_state.cycle_progress + 1) % 100
-    if world_state.cycle_progress == 0:
-        world_state.day += 1
+    progress = world_state.cycle_progress + (100 * 1000) / DAY_CYCLE_MS
+    new_day = world_state.day
+    new_progress = progress
+    if progress >= 100:
+        new_progress = 0
+        new_day += 1
 
-    # Simplified needs update
+    new_time_of_day: TimeOfDay = 'Day'
+    if new_progress > 90 or new_progress < 10: new_time_of_day = 'Night'
+    elif new_progress > 75: new_time_of_day = 'Dusk'
+    elif new_progress < 25: new_time_of_day = 'Dawn'
+
+    old_time_of_day = world_state.time_of_day
+    new_weather = world_state.weather
+    if (old_time_of_day == 'Night' and new_time_of_day == 'Dawn') or \
+       (old_time_of_day == 'Day' and new_time_of_day == 'Dusk'):
+        weather_options = [WeatherType.CLEAR, WeatherType.CLEAR, WeatherType.CLEAR, WeatherType.RAIN, WeatherType.SNOW]
+        new_weather = random.choice(weather_options)
+        add_log('System', '', f"The weather has changed to {new_weather}.", 'SYSTEM')
+
+    temp_fluctuation = math.sin((new_progress / 100) * 2 * math.pi - math.pi / 2)
+    base_temperature = 10 + 15 * (temp_fluctuation + 1) / 2
+    if new_weather == WeatherType.RAIN: base_temperature -= 5
+    if new_weather == WeatherType.SNOW: base_temperature -= 10
+
+    world_state.day = new_day
+    world_state.cycle_progress = new_progress
+    world_state.time_of_day = new_time_of_day
+    world_state.weather = new_weather
+    world_state.temperature = round(base_temperature)
+
+    fires = [item for item in environment.items if item.type == ItemType.FIRE]
+    if world_state.weather == WeatherType.RAIN:
+        for fire in fires:
+            if random.random() < 0.25:
+                fire.type = ItemType.FIRE_PIT
+                add_log('System', '', f"The rain has doused a fire at ({fire.position.x}, {fire.position.y}).", 'SYSTEM')
+
+        saplings = [item for item in environment.items if item.type == ItemType.SAPLING]
+        for sapling in saplings:
+            if random.random() < 0.1:
+                sapling.type = ItemType.TREE
+                add_log('System', '', f"A sapling at ({sapling.position.x}, {sapling.position.y}) grew into a tree in the rain.", 'SYSTEM')
+
+    # Refined needs update
     for robot in environment.robots:
+        is_near_fire = any(abs(robot.position.x - f.position.x) <= 1 and abs(robot.position.y - f.position.y) <= 1 for f in fires)
+
+        warmth = robot.status.warmth
+        if is_near_fire:
+            warmth = min(100, warmth + 10)
+        else:
+            if world_state.time_of_day == 'Night': warmth = max(0, warmth - 5)
+            elif world_state.time_of_day in ['Dusk', 'Dawn']: warmth = max(0, warmth - 2)
+            if world_state.weather == WeatherType.RAIN: warmth = max(0, warmth - 3)
+            if world_state.weather == WeatherType.SNOW: warmth = max(0, warmth - 5)
+        robot.status.warmth = warmth
+
         robot.status.hunger = max(0, robot.status.hunger - 0.5)
-        robot.status.energy = max(0, robot.status.energy - 1)
-        if robot.status.energy == 0:
-            robot.is_inactive = True
+
+        energy = robot.status.energy
+        is_resting = robot.current_action == ActionType.IDLE and is_near_fire
+        if is_resting:
+            energy = min(100, energy + 10)
+        else:
+            energy = max(0, energy - 1)
+        if warmth <= 0 or robot.status.hunger <= 0:
+            energy = max(0, energy - 2)
+        robot.status.energy = energy
+
+        was_inactive = robot.is_inactive
+        is_inactive = energy <= 0
+        if is_inactive and not was_inactive:
+            add_log(robot.name, robot.color, 'Energy depleted. Shutting down.', 'STATUS')
+        if not is_inactive and was_inactive:
+            add_log(robot.name, robot.color, 'Energy restored. Resuming operations.', 'STATUS')
+        robot.is_inactive = is_inactive
 
     return world_state, environment
 
