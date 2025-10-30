@@ -4,6 +4,7 @@ import logging
 import heapq
 import math
 import random
+import time
 from typing import List, Optional, Literal
 
 from models import *
@@ -146,8 +147,8 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
         item_to_pickup = next((i for i in env.items if i.id == target_id and i.position == robot.position), None)
         if item_to_pickup:
             if not robot_in_state.inventory:
-                env.items = [i for i in env.items if i.id != target_id]
                 robot_in_state.inventory = item_to_pickup.type
+                robot_in_state.inventory_item_id = item_to_pickup.id
                 add_log(robot.name, robot.color, f"Picked up {item_to_pickup.type}.", 'ACTION')
             else:
                 add_log(robot.name, robot.color, f"Failed to pick up {item_to_pickup.type}, inventory full.", 'ACTION')
@@ -163,14 +164,30 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
             if is_adjacent:
                 held_item = robot_in_state.inventory
                 if held_item == ItemType.AXE and target.type == ItemType.TREE:
-                    env.items = [i for i in env.items if i.id != target.id]
-                    env.items.append(EnvironmentItem(id=f"wood-{id(target)}", type=ItemType.WOOD, position=target.position))
-                    env.items.append(EnvironmentItem(id=f"seed-{id(target)}", type=ItemType.SEED, position=target.position))
-                    add_log(robot.name, robot.color, "Chopped down the tree.", 'ACTION')
+                    tool = next((i for i in env.items if i.id == robot_in_state.inventory_item_id), None)
+                    if tool:
+                        tool.durability = (tool.durability or 10) - 1
+                        if tool.durability <= 0:
+                            env.items = [i for i in env.items if i.id != tool.id]
+                            robot_in_state.inventory = None
+                            robot_in_state.inventory_item_id = None
+                            add_log(robot.name, robot.color, "The axe broke.", 'ACTION')
+                        env.items = [i for i in env.items if i.id != target.id]
+                        env.items.append(EnvironmentItem(id=f"wood-{id(target)}", type=ItemType.WOOD, position=target.position))
+                        env.items.append(EnvironmentItem(id=f"seed-{id(target)}", type=ItemType.SEED, position=target.position))
+                        add_log(robot.name, robot.color, "Chopped down the tree.", 'ACTION')
                 elif held_item == ItemType.PICKAXE and target.type == ItemType.ROCK:
-                    env.items = [i for i in env.items if i.id != target.id]
-                    env.items.append(EnvironmentItem(id=f"stone-{id(target)}", type=ItemType.STONE, position=target.position))
-                    add_log(robot.name, robot.color, "Mined the rock.", 'ACTION')
+                    tool = next((i for i in env.items if i.id == robot_in_state.inventory_item_id), None)
+                    if tool:
+                        tool.durability = (tool.durability or 10) - 1
+                        if tool.durability <= 0:
+                            env.items = [i for i in env.items if i.id != tool.id]
+                            robot_in_state.inventory = None
+                            robot_in_state.inventory_item_id = None
+                            add_log(robot.name, robot.color, "The pickaxe broke.", 'ACTION')
+                        env.items = [i for i in env.items if i.id != target.id]
+                        env.items.append(EnvironmentItem(id=f"stone-{id(target)}", type=ItemType.STONE, position=target.position))
+                        add_log(robot.name, robot.color, "Mined the rock.", 'ACTION')
                 elif held_item == ItemType.WOOD and target.type == ItemType.FIRE_PIT:
                     target.type = ItemType.FIRE
                     robot_in_state.inventory = None
@@ -214,10 +231,12 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
 
     elif action.action == ActionType.DROP:
         if robot_in_state.inventory:
-            item_to_drop = robot_in_state.inventory
-            env.items.append(EnvironmentItem(id=f"{item_to_drop.lower()}-{id(item_to_drop)}", type=item_to_drop, position=robot_in_state.position))
-            robot_in_state.inventory = None
-            add_log(robot.name, robot.color, f"Dropped {item_to_drop}.", 'ACTION')
+            item_to_drop = next((i for i in env.items if i.id == robot_in_state.inventory_item_id), None)
+            if item_to_drop:
+                item_to_drop.position = robot_in_state.position
+                robot_in_state.inventory = None
+                robot_in_state.inventory_item_id = None
+                add_log(robot.name, robot.color, f"Dropped {item_to_drop.type}.", 'ACTION')
 
     elif action.action == ActionType.IDLE:
         add_log(robot.name, robot.color, 'Is resting.', 'ACTION')
@@ -240,10 +259,12 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
 def handle_movement(environment: EnvironmentState) -> EnvironmentState:
     for robot in environment.robots:
         if robot.path and len(robot.path) > 0:
-            next_position = robot.path.pop(0)
-            robot.position = next_position
-            if not robot.path:
-                add_log(robot.name, robot.color, "Arrived at destination.", "ACTION")
+            for _ in range(int(robot.speed)):
+                if robot.path and len(robot.path) > 0:
+                    next_position = robot.path.pop(0)
+                    robot.position = next_position
+                    if not robot.path:
+                        add_log(robot.name, robot.color, "Arrived at destination.", "ACTION")
     return environment
 
 def simulation_tick(world_state: WorldState, environment: EnvironmentState) -> (WorldState, EnvironmentState):
@@ -288,8 +309,7 @@ def simulation_tick(world_state: WorldState, environment: EnvironmentState) -> (
         saplings = [item for item in environment.items if item.type == ItemType.SAPLING]
         for sapling in saplings:
             if random.random() < 0.1:
-                sapling.type = ItemType.TREE
-                add_log('System', '', f"A sapling at ({sapling.position.x}, {sapling.position.y}) grew into a tree in the rain.", 'SYSTEM')
+                add_log('System', '', f"A sapling at ({sapling.position.x}, {sapling.position.y}) is being watered by the rain.", 'SYSTEM')
 
     # Refined needs update
     for robot in environment.robots:
@@ -299,20 +319,30 @@ def simulation_tick(world_state: WorldState, environment: EnvironmentState) -> (
         if is_near_fire:
             warmth = min(100, warmth + 10)
         else:
-            if world_state.time_of_day == 'Night': warmth = max(0, warmth - 5)
-            elif world_state.time_of_day in ['Dusk', 'Dawn']: warmth = max(0, warmth - 2)
-            if world_state.weather == WeatherType.RAIN: warmth = max(0, warmth - 3)
-            if world_state.weather == WeatherType.SNOW: warmth = max(0, warmth - 5)
+            if world_state.time_of_day == 'Night': warmth = max(0, warmth - 10)
+            elif world_state.time_of_day in ['Dusk', 'Dawn']: warmth = max(0, warmth - 5)
+            if world_state.weather == WeatherType.RAIN: warmth = max(0, warmth - 5)
+            if world_state.weather == WeatherType.SNOW: warmth = max(0, warmth - 10)
         robot.status.warmth = warmth
 
         robot.status.hunger = max(0, robot.status.hunger - 0.5)
+
+        if world_state.weather == WeatherType.SNOW:
+            robot.speed = 0.5
+        else:
+            robot.speed = 1
 
         energy = robot.status.energy
         is_resting = robot.current_action == ActionType.IDLE and is_near_fire
         if is_resting:
             energy = min(100, energy + 10)
         else:
-            energy = max(0, energy - 1)
+            if robot.current_action == ActionType.MOVE:
+                energy = max(0, energy - 2)
+            elif robot.current_action == ActionType.USE:
+                energy = max(0, energy - 5)
+            else:
+                energy = max(0, energy - 1)
         if warmth <= 0 or robot.status.hunger <= 0:
             energy = max(0, energy - 2)
         robot.status.energy = energy

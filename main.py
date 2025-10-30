@@ -22,7 +22,7 @@ async def run_simulation_turn(active_robot_index: int, environment: EnvironmentS
         add_log(current_robot.name, current_robot.color, 'Could not decide on an action.', 'SYSTEM')
         return environment
 
-async def get_robot_next_action(robot: Robot, environment: EnvironmentState, world: WorldState, host: str, logs: list) -> Optional[RobotAction]:
+async def get_robot_next_action(robot: Robot, environment: EnvironmentState, world: WorldState, host: str, logs: list, scenario: Scenario) -> Optional[RobotAction]:
     memory_file = f"{robot.id}_memory.json"
     if os.path.exists(memory_file):
         with open(memory_file, 'r') as f:

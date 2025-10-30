@@ -54,15 +54,17 @@ class Robot(BaseItem):
     type: ItemType = ItemType.ROBOT
     name: str
     inventory: Optional[ItemType] = None
+    inventory_item_id: Optional[str] = None
     color: str
     path: Optional[List[Position]] = None
     status: RobotStatus = RobotStatus()
     is_inactive: bool = False
     current_action: Optional[ActionType] = None
     memory: RobotMemory = RobotMemory()
+    speed: int = 1
 
 class EnvironmentItem(BaseItem):
-    pass
+    durability: Optional[int] = None
 
 class EnvironmentState(BaseModel):
     items: List[EnvironmentItem]
