@@ -8,13 +8,13 @@ import logging
 from models import *
 from simulation import *
 
-async def run_simulation_turn(active_robot_index: int, environment: EnvironmentState, world_state: WorldState, host: str, logs: list) -> EnvironmentState:
+async def run_simulation_turn(active_robot_index: int, environment: EnvironmentState, world_state: WorldState, host: str, logs: list, scenario: Scenario) -> EnvironmentState:
     current_robot = environment.robots[active_robot_index]
 
     if current_robot.path and len(current_robot.path) > 0:
         return environment
 
-    action = await get_robot_next_action(current_robot, environment, world_state, host, logs)
+    action = await get_robot_next_action(current_robot, environment, world_state, host, logs, scenario)
 
     if action:
         return process_action(current_robot, action, environment)
@@ -64,7 +64,7 @@ Respond with a JSON object in the format: {{"thought": "...", "action": "...", "
 """
 
     try:
-        client = ollama.AsyncClient(host=host)
+        client = ollama.AsyncClient(host=host, timeout=30)
         response = await client.generate(model='llama2', prompt=prompt)
 
         # Extract the JSON part of the response
@@ -82,7 +82,7 @@ Respond with a JSON object in the format: {{"thought": "...", "action": "...", "
         logging.error(f"Error getting robot action from Ollama: {e}")
         return None
 
-async def main(host: str):
+async def main(host: str, scenario_file: str):
     try:
         with open(scenario_file, 'r') as f:
             scenario_data = json.load(f)
@@ -99,7 +99,7 @@ async def main(host: str):
 
     while True:
         render_grid(environment, world_state)
-        environment = await run_simulation_turn(active_robot_index, environment, world_state, host, logs)
+        environment = await run_simulation_turn(active_robot_index, environment, world_state, host, logs, scenario)
         environment = handle_movement(environment)
         world_state, environment = simulation_tick(world_state, environment)
 
@@ -109,7 +109,8 @@ async def main(host: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--host", default="192.168.86.250", help="Ollama host")
+    default_host = os.environ.get("OLLAMA_HOST") or "192.168.86.250"
+    parser.add_argument("--host", default=default_host, help="Ollama host")
     parser.add_argument("--port", default="11434", help="Ollama port")
     parser.add_argument("--scenario", default="scenario.json", help="Path to the scenario JSON file")
     args = parser.parse_args()
