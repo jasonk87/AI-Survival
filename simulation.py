@@ -21,6 +21,7 @@ CRAFTING_RECIPES = {
     ItemType.AXE_HEAD: {ItemType.STONE: 3},
     ItemType.AXE: {ItemType.TOOL_HANDLE: 1, ItemType.AXE_HEAD: 1},
     ItemType.PICKAXE: {ItemType.TOOL_HANDLE: 1, ItemType.STONE: 3},
+    ItemType.HOE: {ItemType.WOOD: 2, ItemType.STONE: 1},
 }
 
 logs: List[LogEntry] = []
@@ -217,7 +218,7 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
                     inventory[ItemType.BUCKET_EMPTY] = inventory.get(ItemType.BUCKET_EMPTY, 0) + 1
                     target.type = ItemType.TREE
                     add_log(robot.name, robot.color, "Watered the sapling. It grew into a tree!", 'ACTION')
-                elif inventory.get(ItemType.SEED, 0) > 0 and target.type == ItemType.SOIL:
+                elif inventory.get(ItemType.SEED, 0) > 0 and (target.type == ItemType.SOIL or target.type == ItemType.FARM_PLOT):
                     inventory[ItemType.SEED] -= 1
                     if inventory[ItemType.SEED] == 0:
                         del inventory[ItemType.SEED]
@@ -264,6 +265,17 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
 
     elif action.action == ActionType.IDLE:
         add_log(robot.name, robot.color, 'Is resting.', 'ACTION')
+
+    elif action.action == ActionType.TILL:
+        if robot_in_state.inventory.get(ItemType.HOE, 0) > 0:
+            target_soil = next((i for i in env.items if i.type == ItemType.SOIL and i.position == robot.position), None)
+            if target_soil:
+                target_soil.type = ItemType.FARM_PLOT
+                add_log(robot.name, robot.color, "Tilled the soil.", 'ACTION')
+            else:
+                add_log(robot.name, robot.color, "Tried to till, but there is no soil here.", 'ACTION')
+        else:
+            add_log(robot.name, robot.color, "Tried to till, but has no hoe.", 'ACTION')
 
     elif action.action == ActionType.CRAFT:
         item_to_craft = action.payload.item_to_craft
@@ -396,8 +408,19 @@ def simulation_tick(world_state: WorldState, environment: EnvironmentState) -> (
 
         saplings = [item for item in environment.items if item.type == ItemType.SAPLING]
         for sapling in saplings:
-            if random.random() < 0.1:
-                add_log('System', '', f"A sapling at ({sapling.position.x}, {sapling.position.y}) is being watered by the rain.", 'SYSTEM')
+            farm_plot = next((i for i in env.items if i.type == ItemType.FARM_PLOT and i.position == sapling.position), None)
+            growth_chance = 0.05
+            if farm_plot:
+                growth_chance = 0.2
+
+            if world_state.season == Season.SUMMER:
+                growth_chance *= 2
+            elif world_state.season == Season.WINTER:
+                growth_chance = 0
+
+            if random.random() < growth_chance:
+                sapling.type = ItemType.TREE
+                add_log('System', '', f"A sapling at ({sapling.position.x}, {sapling.position.y}) grew into a tree.", 'SYSTEM')
 
     # Refined needs update
     for robot in environment.robots:

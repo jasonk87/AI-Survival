@@ -27,6 +27,8 @@ class ItemType(str, Enum):
     BERRIES = 'BERRIES'
     TOOL_HANDLE = 'TOOL_HANDLE'
     AXE_HEAD = 'AXE_HEAD'
+    HOE = 'HOE'
+    FARM_PLOT = 'FARM_PLOT'
 
 class BaseItem(BaseModel):
     id: str
@@ -50,6 +52,7 @@ class ActionType(str, Enum):
     REMEMBER = 'REMEMBER'
     CRAFT = 'CRAFT'
     GIVE = 'GIVE'
+    TILL = 'TILL'
 
 class Role(str, Enum):
     WOODCUTTER = 'WOODCUTTER'

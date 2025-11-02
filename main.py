@@ -69,6 +69,12 @@ Crafting Recipes:
 - AXE_HEAD: 3 STONE
 - AXE: 1 TOOL_HANDLE, 1 AXE_HEAD
 - PICKAXE: 1 TOOL_HANDLE, 3 STONE
+- HOE: 2 WOOD, 1 STONE
+
+Farming:
+- Use a HOE with the TILL action on SOIL to create a FARM_PLOT.
+- Use a SEED on a FARM_PLOT to plant a SAPLING.
+- Saplings on FARM_PLOTs will grow into TREES over time. Growth is fastest in SUMMER and stops in WINTER.
 
 Based on all this information, decide your next single action to ensure your survival.
 Respond with a JSON object in the format: {{"thought": "...", "action": "...", "payload": {{...}}}}
