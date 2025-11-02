@@ -49,6 +49,11 @@ class ActionType(str, Enum):
     CRAFT = 'CRAFT'
     GIVE = 'GIVE'
 
+class Role(str, Enum):
+    WOODCUTTER = 'WOODCUTTER'
+    MINER = 'MINER'
+    EXPLORER = 'EXPLORER'
+
 class RobotMemory(BaseModel):
     known_locations: dict[str, Position] = {}
 
@@ -58,6 +63,7 @@ class Robot(BaseItem):
     inventory: dict[ItemType, int] = {}
     color: str
     tribe: str
+    role: Optional[Role] = None
     path: Optional[List[Position]] = None
     status: RobotStatus = RobotStatus()
     is_inactive: bool = False

@@ -169,17 +169,23 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
             if is_adjacent:
                 inventory = robot_in_state.inventory
                 if inventory.get(ItemType.AXE, 0) > 0 and target.type == ItemType.TREE:
-                    inventory[ItemType.AXE] -= 1
-                    if inventory[ItemType.AXE] == 0:
-                        del inventory[ItemType.AXE]
+                    if robot_in_state.role == Role.WOODCUTTER:
+                        add_log(robot.name, robot.color, "Woodcutter role provides higher efficiency.", 'STATUS')
+                    else:
+                        inventory[ItemType.AXE] -= 1
+                        if inventory[ItemType.AXE] == 0:
+                            del inventory[ItemType.AXE]
                     env.items = [i for i in env.items if i.id != target.id]
                     env.items.append(EnvironmentItem(id=f"wood-{id(target)}", type=ItemType.WOOD, position=target.position))
                     env.items.append(EnvironmentItem(id=f"seed-{id(target)}", type=ItemType.SEED, position=target.position))
                     add_log(robot.name, robot.color, "Chopped down the tree.", 'ACTION')
                 elif inventory.get(ItemType.PICKAXE, 0) > 0 and target.type == ItemType.ROCK:
-                    inventory[ItemType.PICKAXE] -= 1
-                    if inventory[ItemType.PICKAXE] == 0:
-                        del inventory[ItemType.PICKAXE]
+                    if robot_in_state.role == Role.MINER:
+                        add_log(robot.name, robot.color, "Miner role provides higher efficiency.", 'STATUS')
+                    else:
+                        inventory[ItemType.PICKAXE] -= 1
+                        if inventory[ItemType.PICKAXE] == 0:
+                            del inventory[ItemType.PICKAXE]
                     env.items = [i for i in env.items if i.id != target.id]
                     env.items.append(EnvironmentItem(id=f"stone-{id(target)}", type=ItemType.STONE, position=target.position))
                     add_log(robot.name, robot.color, "Mined the rock.", 'ACTION')
@@ -399,10 +405,12 @@ def update_predators(environment: EnvironmentState):
 
         robot.status.hunger = max(0, robot.status.hunger - 0.5)
 
-        if world_state.weather == WeatherType.SNOW:
-            robot.speed = 0.5
+        if robot.role == Role.EXPLORER:
+            robot.speed = 2
         else:
             robot.speed = 1
+        if world_state.weather == WeatherType.SNOW:
+            robot.speed *= 0.5
 
         energy = robot.status.energy
         is_resting = robot.current_action == ActionType.IDLE and is_near_fire

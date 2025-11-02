@@ -37,8 +37,8 @@ async def get_robot_next_action(robot: Robot, environment: EnvironmentState, wor
     prompt = f"""
 World State: Day {world.day}, Time: {world.time_of_day}, Weather: {world.weather}, Temperature: {world.temperature}°
 
-You are robot {robot.name} ({robot.color}) of {robot.tribe}.
-Your primary goal is to ensure the survival and success of your tribe. Cooperate with your tribe members by sharing resources with the GIVE action.
+You are robot {robot.name} ({robot.color}) of {robot.tribe}. Your role is {robot.role}.
+Your primary goal is to ensure the survival and success of your tribe. Cooperate with your tribe members by sharing resources with the GIVE action and leveraging your unique role.
 
 Your current status:
 - Position: ({robot.position.x}, {robot.position.y})
@@ -59,7 +59,7 @@ Items:
 {chr(10).join(f"- {i.type} (id: {i.id}) at ({i.position.x}, {i.position.y})" for i in environment.items) or 'No items in the environment.'}
 
 Other Robots:
-{chr(10).join(f"- {r.name} ({r.tribe}) is at ({r.position.x}, {r.position.y}) with inventory: {r.inventory or 'empty'}" for r in other_robots) or 'No other robots.'}
+{chr(10).join(f"- {r.name} ({r.tribe}, {r.role}) is at ({r.position.x}, {r.position.y}) with inventory: {r.inventory or 'empty'}" for r in other_robots) or 'No other robots.'}
 
 Recent Event Log (last 15 events):
 {chr(10).join(f"{l.robot_name}: {l.message}" for l in logs[-15:])}
