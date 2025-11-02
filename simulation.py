@@ -17,8 +17,10 @@ IMPASSABLE_ITEM_TYPES = [
 DAY_CYCLE_MS = 60000  # 60 seconds for a full day/night cycle
 
 CRAFTING_RECIPES = {
-    ItemType.AXE: {ItemType.WOOD: 3, ItemType.STONE: 2},
-    ItemType.PICKAXE: {ItemType.WOOD: 2, ItemType.STONE: 3},
+    ItemType.TOOL_HANDLE: {ItemType.WOOD: 2},
+    ItemType.AXE_HEAD: {ItemType.STONE: 3},
+    ItemType.AXE: {ItemType.TOOL_HANDLE: 1, ItemType.AXE_HEAD: 1},
+    ItemType.PICKAXE: {ItemType.TOOL_HANDLE: 1, ItemType.STONE: 3},
 }
 
 logs: List[LogEntry] = []

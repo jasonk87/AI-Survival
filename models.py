@@ -25,6 +25,8 @@ class ItemType(str, Enum):
     SAPLING = 'SAPLING'
     BERRY_BUSH = 'BERRY_BUSH'
     BERRIES = 'BERRIES'
+    TOOL_HANDLE = 'TOOL_HANDLE'
+    AXE_HEAD = 'AXE_HEAD'
 
 class BaseItem(BaseModel):
     id: str

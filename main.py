@@ -65,8 +65,10 @@ Recent Event Log (last 15 events):
 {chr(10).join(f"{l.robot_name}: {l.message}" for l in logs[-15:])}
 
 Crafting Recipes:
-- AXE: 3 WOOD, 2 STONE
-- PICKAXE: 2 WOOD, 3 STONE
+- TOOL_HANDLE: 2 WOOD
+- AXE_HEAD: 3 STONE
+- AXE: 1 TOOL_HANDLE, 1 AXE_HEAD
+- PICKAXE: 1 TOOL_HANDLE, 3 STONE
 
 Based on all this information, decide your next single action to ensure your survival.
 Respond with a JSON object in the format: {{"thought": "...", "action": "...", "payload": {{...}}}}
