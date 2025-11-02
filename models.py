@@ -124,9 +124,16 @@ class Predator(BaseModel):
     position: Position
     is_active: bool = True
 
+class Season(str, Enum):
+    SPRING = 'SPRING'
+    SUMMER = 'SUMMER'
+    AUTUMN = 'AUTUMN'
+    WINTER = 'WINTER'
+
 class WorldState(BaseModel):
     day: int = 1
     time_of_day: TimeOfDay = 'Day'
     cycle_progress: float = 25.0
     temperature: int = 20
     weather: WeatherType = WeatherType.CLEAR
+    season: Season = Season.SPRING

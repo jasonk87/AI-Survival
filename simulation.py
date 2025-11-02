@@ -340,10 +340,19 @@ def simulation_tick(world_state: WorldState, environment: EnvironmentState) -> (
         new_progress = 0
         new_day += 1
 
+    day_start = 25
+    day_end = 75
+    if world_state.season == Season.SUMMER:
+        day_start = 15
+        day_end = 85
+    elif world_state.season == Season.WINTER:
+        day_start = 35
+        day_end = 65
+
     new_time_of_day: TimeOfDay = 'Day'
-    if new_progress > 90 or new_progress < 10: new_time_of_day = 'Night'
-    elif new_progress > 75: new_time_of_day = 'Dusk'
-    elif new_progress < 25: new_time_of_day = 'Dawn'
+    if new_progress > day_end + 5 or new_progress < day_start - 5: new_time_of_day = 'Night'
+    elif new_progress > day_end: new_time_of_day = 'Dusk'
+    elif new_progress < day_start: new_time_of_day = 'Dawn'
 
     old_time_of_day = world_state.time_of_day
     new_weather = world_state.weather
@@ -354,9 +363,23 @@ def simulation_tick(world_state: WorldState, environment: EnvironmentState) -> (
         add_log('System', '', f"The weather has changed to {new_weather}.", 'SYSTEM')
 
     temp_fluctuation = math.sin((new_progress / 100) * 2 * math.pi - math.pi / 2)
-    base_temperature = 10 + 15 * (temp_fluctuation + 1) / 2
+
+    seasonal_base_temp = 15
+    if world_state.season == Season.SUMMER: seasonal_base_temp = 25
+    elif world_state.season == Season.WINTER: seasonal_base_temp = -5
+
+    base_temperature = seasonal_base_temp + 10 * (temp_fluctuation + 1) / 2
+
     if new_weather == WeatherType.RAIN: base_temperature -= 5
     if new_weather == WeatherType.SNOW: base_temperature -= 10
+
+    # Season progression
+    if new_day % 10 == 0 and world_state.day != new_day:
+        if world_state.season == Season.SPRING: world_state.season = Season.SUMMER
+        elif world_state.season == Season.SUMMER: world_state.season = Season.AUTUMN
+        elif world_state.season == Season.AUTUMN: world_state.season = Season.WINTER
+        elif world_state.season == Season.WINTER: world_state.season = Season.SPRING
+        add_log('System', '', f"The season has changed to {world_state.season}.", 'SYSTEM')
 
     world_state.day = new_day
     world_state.cycle_progress = new_progress

@@ -35,7 +35,7 @@ async def get_robot_next_action(robot: Robot, environment: EnvironmentState, wor
     known_locations_str = "\n".join([f"- {name}: ({pos.x}, {pos.y})" for name, pos in robot.memory.known_locations.items()])
 
     prompt = f"""
-World State: Day {world.day}, Time: {world.time_of_day}, Weather: {world.weather}, Temperature: {world.temperature}°
+World State: Day {world.day}, Time: {world.time_of_day}, Season: {world.season}, Weather: {world.weather}, Temperature: {world.temperature}°
 
 You are robot {robot.name} ({robot.color}) of {robot.tribe}. Your role is {robot.role}.
 Your primary goal is to ensure the survival and success of your tribe. Cooperate with your tribe members by sharing resources with the GIVE action and leveraging your unique role.
