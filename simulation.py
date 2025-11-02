@@ -16,6 +16,11 @@ IMPASSABLE_ITEM_TYPES = [
 
 DAY_CYCLE_MS = 60000  # 60 seconds for a full day/night cycle
 
+CRAFTING_RECIPES = {
+    ItemType.AXE: {ItemType.WOOD: 3, ItemType.STONE: 2},
+    ItemType.PICKAXE: {ItemType.WOOD: 2, ItemType.STONE: 3},
+}
+
 logs: List[LogEntry] = []
 log_id_counter = 0
 
@@ -146,9 +151,9 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
         target_id = action.payload.target_id
         item_to_pickup = next((i for i in env.items if i.id == target_id and i.position == robot.position), None)
         if item_to_pickup:
-            if not robot_in_state.inventory:
-                robot_in_state.inventory = item_to_pickup.type
-                robot_in_state.inventory_item_id = item_to_pickup.id
+            if sum(robot_in_state.inventory.values()) < 10:
+                robot_in_state.inventory[item_to_pickup.type] = robot_in_state.inventory.get(item_to_pickup.type, 0) + 1
+                env.items = [i for i in env.items if i.id != target_id]
                 add_log(robot.name, robot.color, f"Picked up {item_to_pickup.type}.", 'ACTION')
             else:
                 add_log(robot.name, robot.color, f"Failed to pick up {item_to_pickup.type}, inventory full.", 'ACTION')
@@ -162,84 +167,111 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
             is_adjacent = dx <= 1 and dy <= 1 and not (dx == 0 and dy == 0)
 
             if is_adjacent:
-                held_item = robot_in_state.inventory
-                if held_item == ItemType.AXE and target.type == ItemType.TREE:
-                    tool = next((i for i in env.items if i.id == robot_in_state.inventory_item_id), None)
-                    if tool:
-                        tool.durability = (tool.durability or 10) - 1
-                        if tool.durability <= 0:
-                            env.items = [i for i in env.items if i.id != tool.id]
-                            robot_in_state.inventory = None
-                            robot_in_state.inventory_item_id = None
-                            add_log(robot.name, robot.color, "The axe broke.", 'ACTION')
-                        env.items = [i for i in env.items if i.id != target.id]
-                        env.items.append(EnvironmentItem(id=f"wood-{id(target)}", type=ItemType.WOOD, position=target.position))
-                        env.items.append(EnvironmentItem(id=f"seed-{id(target)}", type=ItemType.SEED, position=target.position))
-                        add_log(robot.name, robot.color, "Chopped down the tree.", 'ACTION')
-                elif held_item == ItemType.PICKAXE and target.type == ItemType.ROCK:
-                    tool = next((i for i in env.items if i.id == robot_in_state.inventory_item_id), None)
-                    if tool:
-                        tool.durability = (tool.durability or 10) - 1
-                        if tool.durability <= 0:
-                            env.items = [i for i in env.items if i.id != tool.id]
-                            robot_in_state.inventory = None
-                            robot_in_state.inventory_item_id = None
-                            add_log(robot.name, robot.color, "The pickaxe broke.", 'ACTION')
-                        env.items = [i for i in env.items if i.id != target.id]
-                        env.items.append(EnvironmentItem(id=f"stone-{id(target)}", type=ItemType.STONE, position=target.position))
-                        add_log(robot.name, robot.color, "Mined the rock.", 'ACTION')
-                elif held_item == ItemType.WOOD and target.type == ItemType.FIRE_PIT:
+                inventory = robot_in_state.inventory
+                if inventory.get(ItemType.AXE, 0) > 0 and target.type == ItemType.TREE:
+                    inventory[ItemType.AXE] -= 1
+                    if inventory[ItemType.AXE] == 0:
+                        del inventory[ItemType.AXE]
+                    env.items = [i for i in env.items if i.id != target.id]
+                    env.items.append(EnvironmentItem(id=f"wood-{id(target)}", type=ItemType.WOOD, position=target.position))
+                    env.items.append(EnvironmentItem(id=f"seed-{id(target)}", type=ItemType.SEED, position=target.position))
+                    add_log(robot.name, robot.color, "Chopped down the tree.", 'ACTION')
+                elif inventory.get(ItemType.PICKAXE, 0) > 0 and target.type == ItemType.ROCK:
+                    inventory[ItemType.PICKAXE] -= 1
+                    if inventory[ItemType.PICKAXE] == 0:
+                        del inventory[ItemType.PICKAXE]
+                    env.items = [i for i in env.items if i.id != target.id]
+                    env.items.append(EnvironmentItem(id=f"stone-{id(target)}", type=ItemType.STONE, position=target.position))
+                    add_log(robot.name, robot.color, "Mined the rock.", 'ACTION')
+                elif inventory.get(ItemType.WOOD, 0) > 0 and target.type == ItemType.FIRE_PIT:
+                    inventory[ItemType.WOOD] -= 1
+                    if inventory[ItemType.WOOD] == 0:
+                        del inventory[ItemType.WOOD]
                     target.type = ItemType.FIRE
-                    robot_in_state.inventory = None
                     add_log(robot.name, robot.color, "Used wood to start a fire.", 'ACTION')
-                elif held_item == ItemType.BUCKET_EMPTY and target.type == ItemType.WATER_SOURCE:
-                    robot_in_state.inventory = ItemType.BUCKET_FULL
+                elif inventory.get(ItemType.BUCKET_EMPTY, 0) > 0 and target.type == ItemType.WATER_SOURCE:
+                    inventory[ItemType.BUCKET_EMPTY] -= 1
+                    if inventory[ItemType.BUCKET_EMPTY] == 0:
+                        del inventory[ItemType.BUCKET_EMPTY]
+                    inventory[ItemType.BUCKET_FULL] = inventory.get(ItemType.BUCKET_FULL, 0) + 1
                     add_log(robot.name, robot.color, "Filled the bucket.", 'ACTION')
-                elif held_item == ItemType.BUCKET_FULL and target.type == ItemType.FIRE:
+                elif inventory.get(ItemType.BUCKET_FULL, 0) > 0 and target.type == ItemType.FIRE:
+                    inventory[ItemType.BUCKET_FULL] -= 1
+                    if inventory[ItemType.BUCKET_FULL] == 0:
+                        del inventory[ItemType.BUCKET_FULL]
+                    inventory[ItemType.BUCKET_EMPTY] = inventory.get(ItemType.BUCKET_EMPTY, 0) + 1
                     target.type = ItemType.FIRE_PIT
-                    robot_in_state.inventory = ItemType.BUCKET_EMPTY
                     add_log(robot.name, robot.color, "Doused the fire.", 'ACTION')
-                elif held_item == ItemType.BUCKET_FULL and target.type == ItemType.SAPLING:
+                elif inventory.get(ItemType.BUCKET_FULL, 0) > 0 and target.type == ItemType.SAPLING:
+                    inventory[ItemType.BUCKET_FULL] -= 1
+                    if inventory[ItemType.BUCKET_FULL] == 0:
+                        del inventory[ItemType.BUCKET_FULL]
+                    inventory[ItemType.BUCKET_EMPTY] = inventory.get(ItemType.BUCKET_EMPTY, 0) + 1
                     target.type = ItemType.TREE
-                    robot_in_state.inventory = ItemType.BUCKET_EMPTY
                     add_log(robot.name, robot.color, "Watered the sapling. It grew into a tree!", 'ACTION')
-                elif held_item == ItemType.SEED and target.type == ItemType.SOIL:
+                elif inventory.get(ItemType.SEED, 0) > 0 and target.type == ItemType.SOIL:
+                    inventory[ItemType.SEED] -= 1
+                    if inventory[ItemType.SEED] == 0:
+                        del inventory[ItemType.SEED]
                     target.type = ItemType.SAPLING
-                    robot_in_state.inventory = None
                     add_log(robot.name, robot.color, "Planted a seed.", 'ACTION')
-                elif held_item == ItemType.STONE and target.type == ItemType.STONE:
+                elif inventory.get(ItemType.STONE, 0) > 0 and target.type == ItemType.STONE:
+                    inventory[ItemType.STONE] -= 1
+                    if inventory[ItemType.STONE] == 0:
+                        del inventory[ItemType.STONE]
                     env.items = [i for i in env.items if i.id != target.id]
                     env.items.append(EnvironmentItem(id=f"wall-{id(target)}", type=ItemType.WALL, position=target.position))
-                    robot_in_state.inventory = None
                     add_log(robot.name, robot.color, "Built a wall segment.", 'ACTION')
-                elif not held_item and target.type == ItemType.BERRY_BUSH:
+                elif not any(inventory) and target.type == ItemType.BERRY_BUSH:
                     env.items = [i for i in env.items if i.id != target.id]
-                    robot_in_state.inventory = ItemType.BERRIES
+                    inventory[ItemType.BERRIES] = inventory.get(ItemType.BERRIES, 0) + 1
                     add_log(robot.name, robot.color, 'Picked some berries.', 'ACTION')
                 else:
-                    add_log(robot.name, robot.color, f"Tried to use {held_item or 'hands'} on {target.type}, but it did nothing.", 'ACTION')
+                    add_log(robot.name, robot.color, f"Tried to use inventory on {target.type}, but it did nothing.", 'ACTION')
             else:
                 add_log(robot.name, robot.color, f"Tried to use an item on {target.type}, but was too far away.", 'ACTION')
 
     elif action.action == ActionType.EAT:
-        if robot_in_state.inventory == ItemType.BERRIES:
-            robot_in_state.inventory = None
+        if robot_in_state.inventory.get(ItemType.BERRIES, 0) > 0:
+            robot_in_state.inventory[ItemType.BERRIES] -= 1
+            if robot_in_state.inventory[ItemType.BERRIES] == 0:
+                del robot_in_state.inventory[ItemType.BERRIES]
             robot_in_state.status.hunger = min(100, robot_in_state.status.hunger + 50)
             add_log(robot.name, robot.color, "Ate the berries.", 'ACTION')
         else:
             add_log(robot.name, robot.color, "Tried to eat, but has no food.", 'ACTION')
 
     elif action.action == ActionType.DROP:
-        if robot_in_state.inventory:
-            item_to_drop = next((i for i in env.items if i.id == robot_in_state.inventory_item_id), None)
-            if item_to_drop:
-                item_to_drop.position = robot_in_state.position
-                robot_in_state.inventory = None
-                robot_in_state.inventory_item_id = None
-                add_log(robot.name, robot.color, f"Dropped {item_to_drop.type}.", 'ACTION')
+        item_to_drop_type = action.payload.get("item_type")
+        if item_to_drop_type in robot_in_state.inventory and robot_in_state.inventory[item_to_drop_type] > 0:
+            robot_in_state.inventory[item_to_drop_type] -= 1
+            if robot_in_state.inventory[item_to_drop_type] == 0:
+                del robot_in_state.inventory[item_to_drop_type]
+
+            new_item = EnvironmentItem(id=f"{item_to_drop_type.lower()}-{time.time()}", type=item_to_drop_type, position=robot_in_state.position)
+            env.items.append(new_item)
+            add_log(robot.name, robot.color, f"Dropped {item_to_drop_type}.", 'ACTION')
+        else:
+            add_log(robot.name, robot.color, f"Tried to drop {item_to_drop_type}, but has none.", 'ACTION')
 
     elif action.action == ActionType.IDLE:
         add_log(robot.name, robot.color, 'Is resting.', 'ACTION')
+
+    elif action.action == ActionType.CRAFT:
+        item_to_craft = action.payload.item_to_craft
+        if item_to_craft in CRAFTING_RECIPES:
+            recipe = CRAFTING_RECIPES[item_to_craft]
+            can_craft = all(robot_in_state.inventory.get(res, 0) >= count for res, count in recipe.items())
+            if can_craft:
+                for res, count in recipe.items():
+                    robot_in_state.inventory[res] -= count
+                    if robot_in_state.inventory[res] == 0:
+                        del robot_in_state.inventory[res]
+
+                robot_in_state.inventory[item_to_craft] = robot_in_state.inventory.get(item_to_craft, 0) + 1
+                add_log(robot.name, robot.color, f"Crafted a {item_to_craft}.", 'ACTION')
+            else:
+                add_log(robot.name, robot.color, f"Tried to craft a {item_to_craft}, but is missing resources.", 'ACTION')
 
     elif action.action == ActionType.REMEMBER:
         name = action.payload.memory_name
