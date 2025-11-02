@@ -47,6 +47,7 @@ class ActionType(str, Enum):
     EAT = 'EAT'
     REMEMBER = 'REMEMBER'
     CRAFT = 'CRAFT'
+    GIVE = 'GIVE'
 
 class RobotMemory(BaseModel):
     known_locations: dict[str, Position] = {}
@@ -56,6 +57,7 @@ class Robot(BaseItem):
     name: str
     inventory: dict[ItemType, int] = {}
     color: str
+    tribe: str
     path: Optional[List[Position]] = None
     status: RobotStatus = RobotStatus()
     is_inactive: bool = False
@@ -80,6 +82,8 @@ class RobotActionPayload(BaseModel):
     memory_name: Optional[str] = None
     memory_position: Optional[Position] = None
     item_to_craft: Optional[ItemType] = None
+    target_robot_id: Optional[str] = None
+    item_type: Optional[ItemType] = None
 
 class RobotAction(BaseModel):
     action: ActionType

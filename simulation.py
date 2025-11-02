@@ -273,6 +273,31 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
             else:
                 add_log(robot.name, robot.color, f"Tried to craft a {item_to_craft}, but is missing resources.", 'ACTION')
 
+    elif action.action == ActionType.GIVE:
+        target_robot_id = action.payload.target_robot_id
+        item_type = action.payload.item_type
+        target_robot = next((r for r in env.robots if r.id == target_robot_id), None)
+
+        if target_robot and item_type and robot_in_state.inventory.get(item_type, 0) > 0:
+            dx = abs(robot.position.x - target_robot.position.x)
+            dy = abs(robot.position.y - target_robot.position.y)
+            is_adjacent = dx <= 1 and dy <= 1 and not (dx == 0 and dy == 0)
+
+            if is_adjacent:
+                if sum(target_robot.inventory.values()) < 10:
+                    robot_in_state.inventory[item_type] -= 1
+                    if robot_in_state.inventory[item_type] == 0:
+                        del robot_in_state.inventory[item_type]
+
+                    target_robot.inventory[item_type] = target_robot.inventory.get(item_type, 0) + 1
+                    add_log(robot.name, robot.color, f"Gave {item_type} to {target_robot.name}.", 'ACTION')
+                else:
+                    add_log(robot.name, robot.color, f"Tried to give {item_type} to {target_robot.name}, but their inventory is full.", 'ACTION')
+            else:
+                add_log(robot.name, robot.color, f"Tried to give {item_type} to {target_robot.name}, but they are too far away.", 'ACTION')
+        else:
+            add_log(robot.name, robot.color, "Tried to give an item, but the target or item was invalid.", 'ACTION')
+
     elif action.action == ActionType.REMEMBER:
         name = action.payload.memory_name
         pos = action.payload.memory_position
