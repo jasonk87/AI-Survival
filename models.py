@@ -96,6 +96,8 @@ class RobotActionPayload(BaseModel):
     item_to_craft: Optional[ItemType] = None
     target_robot_id: Optional[str] = None
     item_type: Optional[ItemType] = None
+    message_type: Optional[str] = None
+    message_data: Optional[dict] = None
 
 class RobotAction(BaseModel):
     action: ActionType
@@ -140,3 +142,4 @@ class WorldState(BaseModel):
     temperature: int = 20
     weather: WeatherType = WeatherType.CLEAR
     season: Season = Season.SPRING
+    message_log: List[dict] = []

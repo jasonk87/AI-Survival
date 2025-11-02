@@ -32,6 +32,8 @@ async def get_robot_next_action(robot: Robot, environment: EnvironmentState, wor
     predators = environment.predators
     predators_str = "\n".join([f"- Predator at ({p.position.x}, {p.position.y})" for p in predators])
 
+    message_log_str = "\n".join([f"- {msg['robot_id']}: {msg['message_type']} {msg['message_data']}" for msg in world.message_log[-5:]])
+
     known_locations_str = "\n".join([f"- {name}: ({pos.x}, {pos.y})" for name, pos in robot.memory.known_locations.items()])
 
     prompt = f"""
@@ -39,6 +41,7 @@ World State: Day {world.day}, Time: {world.time_of_day}, Season: {world.season},
 
 You are robot {robot.name} ({robot.color}) of {robot.tribe}. Your role is {robot.role}.
 Your primary goal is to ensure the survival and success of your tribe. Cooperate with your tribe members by sharing resources with the GIVE action and leveraging your unique role.
+Use the TALK action to broadcast important information to your tribe, such as the location of resources or dangers. Listen to incoming messages and use the REMEMBER action to update your memory.
 
 Your current status:
 - Position: ({robot.position.x}, {robot.position.y})
@@ -53,6 +56,9 @@ Your Memory (Known Locations):
 
 DANGER: Predators have been spotted in the area. Avoid them at all costs.
 {predators_str}
+
+Recent Messages:
+{message_log_str or "No recent messages."}
 
 Current Environment State:
 Items:

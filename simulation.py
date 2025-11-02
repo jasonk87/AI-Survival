@@ -148,7 +148,14 @@ def process_action(robot: Robot, action: RobotAction, env: EnvironmentState) -> 
             add_log(robot.name, robot.color, f"Tried to move {direction}, but it was blocked.", 'ACTION')
 
     elif action.action == ActionType.TALK:
-        add_log(robot.name, robot.color, action.payload.message or '...', 'COMMUNICATION')
+        message = {
+            "robot_id": robot.id,
+            "tribe": robot.tribe,
+            "message_type": action.payload.message_type,
+            "message_data": action.payload.message_data,
+        }
+        world_state.message_log.append(message)
+        add_log(robot.name, robot.color, f"Broadcasted message: {action.payload.message_type}", 'COMMUNICATION')
 
     elif action.action == ActionType.PICKUP:
         target_id = action.payload.target_id
