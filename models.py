@@ -71,6 +71,7 @@ class EnvironmentItem(BaseItem):
 class EnvironmentState(BaseModel):
     items: List[EnvironmentItem]
     robots: List[Robot]
+    predators: List[Predator] = []
 
 Direction = Literal['UP', 'DOWN', 'LEFT', 'RIGHT']
 
@@ -94,6 +95,7 @@ class Scenario(BaseModel):
     grid_size: int
     items: List[EnvironmentItem]
     robots: List[Robot]
+    predators: List[Predator] = []
 
 class LogEntry(BaseModel):
     id: int
@@ -108,6 +110,11 @@ class WeatherType(str, Enum):
     CLEAR = 'Clear'
     RAIN = 'Rain'
     SNOW = 'Snow'
+
+class Predator(BaseModel):
+    id: str
+    position: Position
+    is_active: bool = True
 
 class WorldState(BaseModel):
     day: int = 1

@@ -29,6 +29,8 @@ async def get_robot_next_action(robot: Robot, environment: EnvironmentState, wor
             robot.memory = RobotMemory(**json.load(f))
 
     other_robots = [r for r in environment.robots if r.id != robot.id]
+    predators = environment.predators
+    predators_str = "\n".join([f"- Predator at ({p.position.x}, {p.position.y})" for p in predators])
 
     known_locations_str = "\n".join([f"- {name}: ({pos.x}, {pos.y})" for name, pos in robot.memory.known_locations.items()])
 
@@ -48,6 +50,9 @@ Your current status:
 
 Your Memory (Known Locations):
 {known_locations_str or "No known locations."}
+
+DANGER: Predators have been spotted in the area. Avoid them at all costs.
+{predators_str}
 
 Current Environment State:
 Items:
