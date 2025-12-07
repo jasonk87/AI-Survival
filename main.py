@@ -1,4 +1,4 @@
-import ollama
+import google.generativeai as genai
 import json
 import asyncio
 import argparse
@@ -94,22 +94,27 @@ Respond with a JSON object in the format: {{"thought": "...", "action": "...", "
 """
 
     try:
-        client = ollama.AsyncClient(host=host, timeout=30)
-        response = await client.generate(model='llama2', prompt=prompt)
+        api_key = os.environ.get("GOOGLE_API_KEY")
+        if not api_key:
+            logging.error("GOOGLE_API_KEY environment variable not set.")
+            return None
 
-        # Extract the JSON part of the response
-        json_response = response['response'].strip()
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-1.5-flash")
 
-        # It's possible the model returns markdown JSON, so we need to clean it
-        if json_response.startswith('```json'):
-            json_response = json_response.replace('```json', '').replace('```', '').strip()
+        # Adding json format instruction for Gemini
+        response = await model.generate_content_async(
+            prompt,
+            generation_config={"response_mime_type": "application/json"}
+        )
+
+        json_response = response.text.strip()
 
         action_data = json.loads(json_response)
-
         return RobotAction(**action_data)
 
     except Exception as e:
-        logging.error(f"Error getting robot action from Ollama: {e}")
+        logging.error(f"Error getting robot action from Gemini: {e}")
         return None
 
 async def main(host: str, scenario_file: str):
@@ -139,12 +144,12 @@ async def main(host: str, scenario_file: str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    # Host argument is kept for compatibility but not used for Gemini
     default_host = os.environ.get("OLLAMA_HOST") or "192.168.86.250"
-    parser.add_argument("--host", default=default_host, help="Ollama host")
-    parser.add_argument("--port", default="11434", help="Ollama port")
+    parser.add_argument("--host", default=default_host, help="Host (deprecated)")
+    parser.add_argument("--port", default="11434", help="Port (deprecated)")
     parser.add_argument("--scenario", default="scenario.json", help="Path to the scenario JSON file")
     args = parser.parse_args()
 
-    ollama_host = f"http://{args.host}:{args.port}"
-
-    asyncio.run(main(host=ollama_host, scenario_file=args.scenario))
+    # host argument is no longer used for Gemini
+    asyncio.run(main(host="", scenario_file=args.scenario))
