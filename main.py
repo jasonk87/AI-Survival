@@ -94,9 +94,16 @@ Respond with a JSON object in the format: {{"thought": "...", "action": "...", "
 """
 
     try:
-        api_key = os.environ.get("GOOGLE_API_KEY")
-        if not api_key:
-            logging.error("GOOGLE_API_KEY environment variable not set.")
+        config_file = 'config.json'
+        if os.path.exists(config_file):
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+                api_key = config.get("GOOGLE_API_KEY")
+        else:
+            api_key = os.environ.get("GOOGLE_API_KEY")
+
+        if not api_key or api_key == "YOUR_API_KEY_HERE":
+            logging.error("GOOGLE_API_KEY not found in config.json or environment variables.")
             return None
 
         genai.configure(api_key=api_key)
