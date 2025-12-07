@@ -6,9 +6,9 @@
         {"id": "axe-1", "type": "AXE", "position": {"x": 1, "y": 1}}
     ],
     "robots": [
-        {"id": "robot-1", "type": "ROBOT", "name": "R1", "color": "blue", "position": {"x": 0, "y": 0}, "tribe": "Tribe A", "role": "WOODCUTTER"},
-        {"id": "robot-2", "type": "ROBOT", "name": "R2", "color": "green", "position": {"x": 1, "y": 0}, "tribe": "Tribe A", "role": "MINER"},
-        {"id": "robot-3", "type": "ROBOT", "name": "R3", "color": "red", "position": {"x": 19, "y": 19}, "tribe": "Tribe B", "role": "EXPLORER"}
+        {"id": "robot-1", "type": "ROBOT", "name": "R1", "color": "blue", "position": {"x": 0, "y": 0}, "tribe": "Tribe A", "role": "WOODCUTTER", "personality": "Hardworking and obedient", "is_leader": false},
+        {"id": "robot-2", "type": "ROBOT", "name": "R2", "color": "green", "position": {"x": 1, "y": 0}, "tribe": "Tribe A", "role": "MINER", "personality": "Grumpy but protective", "is_leader": true},
+        {"id": "robot-3", "type": "ROBOT", "name": "R3", "color": "red", "position": {"x": 19, "y": 19}, "tribe": "Tribe B", "role": "EXPLORER", "personality": "Curious and risk-taking", "is_leader": true}
     ],
     "predators": [
         {"id": "predator-1", "position": {"x": 10, "y": 10}}

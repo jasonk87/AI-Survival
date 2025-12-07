@@ -36,11 +36,18 @@ async def get_robot_next_action(robot: Robot, environment: EnvironmentState, wor
 
     known_locations_str = "\n".join([f"- {name}: ({pos.x}, {pos.y})" for name, pos in robot.memory.known_locations.items()])
 
+    leader_text = "You are the LEADER of your tribe." if robot.is_leader else "You are a follower in your tribe."
+    personality_text = f"Your personality is: {robot.personality}." if robot.personality else ""
+
     prompt = f"""
 World State: Day {world.day}, Time: {world.time_of_day}, Season: {world.season}, Weather: {world.weather}, Temperature: {world.temperature}°
 
 You are robot {robot.name} ({robot.color}) of {robot.tribe}. Your role is {robot.role}.
+{leader_text}
+{personality_text}
+
 Your primary goal is to ensure the survival and success of your tribe. Cooperate with your tribe members by sharing resources with the GIVE action and leveraging your unique role.
+Act according to your personality and leadership role. If you are a leader, guide others and prioritize the tribe's long-term survival. If you are a follower, consider the leader's actions but also your own survival.
 Use the TALK action to broadcast important information to your tribe, such as the location of resources or dangers. Listen to incoming messages and use the REMEMBER action to update your memory.
 
 Your current status:

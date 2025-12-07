@@ -69,6 +69,8 @@ class Robot(BaseItem):
     color: str
     tribe: str
     role: Optional[Role] = None
+    personality: Optional[str] = None
+    is_leader: bool = False
     path: Optional[List[Position]] = None
     status: RobotStatus = RobotStatus()
     is_inactive: bool = False
@@ -78,6 +80,15 @@ class Robot(BaseItem):
 
 class EnvironmentItem(BaseItem):
     durability: Optional[int] = None
+
+
+
+
+
+class Predator(BaseModel):
+    id: str
+    position: Position
+    is_active: bool = True
 
 class EnvironmentState(BaseModel):
     items: List[EnvironmentItem]
@@ -123,11 +134,6 @@ class WeatherType(str, Enum):
     CLEAR = 'Clear'
     RAIN = 'Rain'
     SNOW = 'Snow'
-
-class Predator(BaseModel):
-    id: str
-    position: Position
-    is_active: bool = True
 
 class Season(str, Enum):
     SPRING = 'SPRING'
