@@ -3,11 +3,13 @@ import { GoogleGenAI, Type } from "@google/genai";
 import type { EnvironmentState, LogEntry, Robot, RobotAction, WorldState } from '../types';
 import { SYSTEM_INSTRUCTION } from '../constants';
 import { ActionType } from "../types";
+import config from '../config.json';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
+const apiKey = config.GOOGLE_API_KEY || process.env.API_KEY || '';
+const ai = new GoogleGenAI({ apiKey });
 
 // According to guidelines, the model for complex reasoning should be gemini-2.5-pro
-const model = "gemini-2.5-pro";
+const model = config.MODEL_NAME || "gemini-1.5-flash";
 
 const responseSchema = {
     type: Type.OBJECT,
