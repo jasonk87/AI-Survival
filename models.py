@@ -79,6 +79,11 @@ class Robot(BaseItem):
 class EnvironmentItem(BaseItem):
     durability: Optional[int] = None
 
+class Predator(BaseModel):
+    id: str
+    position: Position
+    is_active: bool = True
+
 class EnvironmentState(BaseModel):
     items: List[EnvironmentItem]
     robots: List[Robot]
@@ -123,11 +128,6 @@ class WeatherType(str, Enum):
     CLEAR = 'Clear'
     RAIN = 'Rain'
     SNOW = 'Snow'
-
-class Predator(BaseModel):
-    id: str
-    position: Position
-    is_active: bool = True
 
 class Season(str, Enum):
     SPRING = 'SPRING'

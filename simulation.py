@@ -434,21 +434,6 @@ def simulation_tick(world_state: WorldState, environment: EnvironmentState) -> (
         is_near_fire = any(abs(robot.position.x - f.position.x) <= 1 and abs(robot.position.y - f.position.y) <= 1 for f in fires)
 
         warmth = robot.status.warmth
-
-def update_predators(environment: EnvironmentState):
-    for predator in environment.predators:
-        if predator.is_active:
-            # Simple random walk
-            dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
-            new_x, new_y = predator.position.x + dx, predator.position.y + dy
-            if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
-                predator.position = Position(x=new_x, y=new_y)
-
-            # Attack robots
-            for robot in environment.robots:
-                if abs(robot.position.x - predator.position.x) <= 1 and abs(robot.position.y - predator.position.y) <= 1:
-                    robot.is_inactive = True
-                    add_log(robot.name, robot.color, f"Was attacked by a predator and shut down.", 'STATUS')
         if is_near_fire:
             warmth = min(100, warmth + 10)
         else:
@@ -493,6 +478,21 @@ def update_predators(environment: EnvironmentState):
     update_predators(environment)
 
     return world_state, environment
+
+def update_predators(environment: EnvironmentState):
+    for predator in environment.predators:
+        if predator.is_active:
+            # Simple random walk
+            dx, dy = random.choice([(0, 1), (0, -1), (1, 0), (-1, 0)])
+            new_x, new_y = predator.position.x + dx, predator.position.y + dy
+            if 0 <= new_x < GRID_SIZE and 0 <= new_y < GRID_SIZE:
+                predator.position = Position(x=new_x, y=new_y)
+
+            # Attack robots
+            for robot in environment.robots:
+                if abs(robot.position.x - predator.position.x) <= 1 and abs(robot.position.y - predator.position.y) <= 1:
+                    robot.is_inactive = True
+                    add_log(robot.name, robot.color, f"Was attacked by a predator and shut down.", 'STATUS')
 
 def render_grid(environment: EnvironmentState, world_state: WorldState):
     os.system('cls' if os.name == 'nt' else 'clear')
