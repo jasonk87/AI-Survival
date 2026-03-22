@@ -1,0 +1,5 @@
+{
+  "name": "AI Agent Sandbox",
+  "description": "A RimWorld-like sandbox where AI agents interact with an environment you build.",
+  "requestFramePermissions": []
+}
